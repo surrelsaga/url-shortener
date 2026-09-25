@@ -21,3 +21,7 @@ How Vite files work:
 - App.tsx is the UI, frontend code
 
 `useState` in App.tsx when I trim boiletplate, I never remove. `npm run dev` still works since it only launches a vite server to run source code, but `npm run build` won't work since it also runs the typesript compiler, the compiler don't allow declared stuffs that is not used (so got error)
+
+## Milestone 3: build a Fastify server
+
+When intializing a Fastify app, why receive `404` after trying to access the server address means success? -> It's because, browser will send a `GET` request to `/` (which does not exist), so it returns 404 json. This proves that the server is working since it needs to receive the request, process, and reply with a status json
