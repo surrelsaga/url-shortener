@@ -38,9 +38,9 @@ Key decisions I made while building this project: what I chose, why, and what it
 - **Choice & why:** By comparing the tradeoffs below, Node 24 will be chosen
     1. first approach requires one build step and adding one dependencie (typescript) to the project
     2. second approach add 1 dependency to the project
-    3. install NO dependency but NO build steps/output folder and NO tools needed to run `.ts`. Clarification: We will install and use a `typescript` compiler in to perform the type checking, make sure everything works nice (this happens at compile time). Iff the type check reports no error, Node 24 just need to strip all the types, and then run that JS file (100% work, since safety-check is done already)
+    3. install NO dependency but NO build steps/output folder and NO tools needed to run `.ts`. Clarification: We will install and use a `typescript` compiler in to perform the type checking manually, make sure everything works nice (this happens at compile time). Iff the type check reports no error, Node 24 just need to strip all the types, and then run that JS file (100% work, since safety-check is done already)
 
-- **Cost:** node 24 approach miss some few syntax rules. e.g: importing files need the `.ts` extension OR typescript features like `enum` aren't allowed. + nothing to check types when the code runs so need to run `typecheck` manually
+- **Cost:** node 24 approach miss some few syntax rules. e.g: importing files need the `.ts` extension OR typescript features like `enum` aren't allowed. + nothing to check types when the code runs so need to run `npm run typecheck` (a dependency like a ts compiler) manually
 
 - **AI input:** AI suggested me to pick Option 3. I didn't agree immediately but questioned what the point of TypeScipt is if the types get stripped, which led to separing `running` from `type checking`.
 
