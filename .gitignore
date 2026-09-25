@@ -1,0 +1,4 @@
+# ignore node dependencies for both client and server
+node_modules
+# ignore file to contain API key, database password, etc.
+.env
