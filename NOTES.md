@@ -25,3 +25,21 @@ How Vite files work:
 ## Milestone 3: build a Fastify server
 
 When intializing a Fastify app, why receive `404` after trying to access the server address means success? -> It's because, browser will send a `GET` request to `/` (which does not exist), so it returns 404 json. This proves that the server is working since it needs to receive the request, process, and reply with a status json
+
+`node --watch`: restart server when code changes
+
+## Milestone 4: writing first route (server health check)
+
+1. app.get('/some-path', async (request, reply) => {
+  return /* something */
+})
+
+- The handler is the function Fastify calls when a matching request arrives.
+  - request is everything that came in: headers, URL parameters, body.
+  - reply lets you control the response: the status code, headers, or a redirect. We'll need that for the redirect in milestone 11.
+- Whatever you return becomes the response. If you return an object, Fastify turns it into JSON, sets the content-type: application/json header, and uses status 200 automatically.
+
+2. Fastify vs Express:
+- Express: Express app keeps all the routes in a list, and walks through that list on every request so adding routes after app.listen() is just adding 1 item to that list so it works
+- Fastify: Fastify builds an optimized lookup structure from all the routes first. After that, the routing is locked and the app starts `listen()` for requesting so adding new path after `app.listen()` won't work.
+
