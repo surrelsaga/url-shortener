@@ -43,3 +43,15 @@ When intializing a Fastify app, why receive `404` after trying to access the ser
 - Express: Express app keeps all the routes in a list, and walks through that list on every request so adding routes after app.listen() is just adding 1 item to that list so it works
 - Fastify: Fastify builds an optimized lookup structure from all the routes first. After that, the routing is locked and the app starts `listen()` for requesting so adding new path after `app.listen()` won't work.
 
+## Milestone 5: document on HTTP request/response flow of the product
+
+Convention of designing api endpoints: (protocol)/://(host:port)/(app_context)/(version)/(resource)/(id)
+- any endpoints, path should name the resource and method is the verb (like the eg above, `url` not `shorten-url`)
+
+e.g: http://localhost:3000/api/v1/url/url-id
+
+For reference: https://medium.com/@nadinCodeHat/rest-api-naming-conventions-and-best-practices-1c4e781eb6a5
+
+
+
+
