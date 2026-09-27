@@ -52,6 +52,53 @@ e.g: http://localhost:3000/api/v1/url/url-id
 
 For reference: https://medium.com/@nadinCodeHat/rest-api-naming-conventions-and-best-practices-1c4e781eb6a5
 
+## Milestone 6: install PostgreSQL (setup commands, how postgres run)
 
+goal: having a Postgres server running on my mac, with empty database for this project
 
+definition: postgres is a server program, runs in background and wait for connects on a port (5432 by default). It doesn't speak HTTP but its own protocol. It answer SQL queries made from the server, the fastify is the Postgres's client
+
+e.g: browser ---HTTP---> Fastify server :3000 --Postgres protocol---> Postgre server :5432
+
+**ONE** Postgres server can hold **MANY** separate databases. Later, create one called url_shortener for this project. We'll store a table of long urls inside it
+
+### Steps to install and play around
+
+1. Install:
+brew install postgresql@18
+Homebrew also runs initdb for you. That creates the data folder where Postgres stores everything, with your macOS username as the admin user.
+
+2. Put the Postgres commands on your PATH. Homebrew doesn't do this automatically for versioned formulas like @18:
+echo 'export PATH="/opt/homebrew/opt/postgresql@18/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+psql --version
+This makes commands like `psql` (the Postgres terminal client) available everywhere. `psql --version` should print 18.x.
+
+3. Start the server:
+brew services start postgresql@18
+`brew services` runs Postgres in the background and starts it again whenever you log in. You don't need a terminal open, unlike your Vite and Fastify servers.
+
+4. Connect and look around:
+psql postgres
+This opens a SQL prompt (postgres=#) connected to the built-in default database called postgres. Try:
+```sql
+-- try line by line
+SELECT version();
+\l
+\q
+```
+- SELECT version(); is your first SQL query. Note the ;: SQL statements need one.
+- \l lists the databases.
+- \q quits.
+
+Commands starting with `\` are `psql` shortcuts, not SQL.
+
+5. Create the project's database:
+createdb url_shortener
+psql url_shortener
+Inside, run `\dt`, which lists tables. It should say "Did not find any relations": an empty database, ready for milestone 9.
+
+Break it on purpose
+
+Run `brew services stop postgresql@18`, then `psql url_shortener` again. Read the error. Which row of the debugging table from milestone 3 does it match? (it can't connect since postgres isn't running) Then start the server again.
 
