@@ -102,3 +102,27 @@ Break it on purpose
 
 Run `brew services stop postgresql@18`, then `psql url_shortener` again. Read the error. Which row of the debugging table from milestone 3 does it match? (it can't connect since postgres isn't running) Then start the server again.
 
+## Milestone 7: learn database concepts and design the urls table
+
+goal: design the table on paper, no code. It will become a schema later
+
+The concepts, how the table look in the database
+
+```
+database: url_shortener
+└── table: urls
+    ┌────┬────────┬───────────────────────────────┐
+    │ id │ code   │ original_url                  │  ← columns (each has a name + a type)
+    ├────┼────────┼───────────────────────────────┤
+    │ 1  │ a8K2x  │ https://youtube.com           │  ← a row = one shortened link
+    │ 2  │ Zp91q  │ https://example.com/long/...  │
+    └────┴────────┴───────────────────────────────┘
+```
+
+- column: a named field with a `type` and does have rules (e.g: `NOT NULL`)
+- row: one record. Every `POST` to `/api/urls` will add 1 row
+- Primary key: column to identify each link in 1 row. This cannot be **EMPTY** or **DUPLICATED**.
+- Index: first column, just to keep everything in order and server for indexing purposing like scanning the first 10 rows or sth.
+- SQL query: extract specific row/column based on the constraint in the query
+
+all design decisions of the table that relates to the API endpoints are in [here](DECISIONS.md#decision-04-design-the-urls-table-to-work-with-api-endpoints)

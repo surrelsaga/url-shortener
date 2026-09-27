@@ -82,3 +82,34 @@ e.g: http://localhost:3000/a8k2x
 - `404 Not Found` when code does not exist in database
 
 
+## Decision 04: design the urls table to work with API endpoints
+
+1. REDIRECT, it's `GET /:code`. The Fastify server will need the code from this request to write SQL query to the urls table to extract the original link and then execute code to redirect user to that link
+
+2. Primary key and code generation: (most important path of designing how the table is built)
+- Option A: an index id column (1,2,3...) that postgres generates automatically -> use as the unique key
+    - Good: Uniqueness is guranteed in id
+    - Bad: endpoints are predictable: /1, /2, /3,...
+    - Fine: url length will grow slowly when there are more shortened links in the db
+- Option B: a randomized code from server is used as the primary key
+    - Good: endpoints are unguessable: /ak98ds, /i9i9d,...
+    - Good: url length are fixed size
+    - Bad: collisions in generated id might happen (e.g: 2 person request to the endpoint at the sametime, 1 generated id used for 2 different links OR the randomizer still can produce an existing key)
+- uniqueness is guranteed only by the primary key in Postgres, the validation (check and then insert) in typescript is not enough to make sure of it (2 req can still pass the validation and end up having the exactly same generated code)
+- approach: generate key -> insert -> if got duplicate key error from db, catch -> generate new key
+
+- **CONCLUSION**: choose option B over option A because the scope of the product is for the links can't be guessed or be enumerated. knowing your shortened link does not infer the pattern of anyone's shortened link.
+
+3. Duplicate long URLs: **allowed**, because the storage cost in small. Preventing duplicates takes more effort, to add extra constraint in steps, extra query and extra API cases and make strangers share one link. For this project `scale`,` that design is not worth it
+
+4. No extra columns: Yes, because the only thing needed to identify the old urls to redirect is just a string, a UNIQUE code
+
+5. Types and NOT NULL: The primary key and links just need to be text, since there is no fixed length for both. NOT NULL because key must exists to identify a link, and a link cannot be absence since a key cannot leads to nothing.
+
+6. Spec table:
+```
+| column       | type | rules       | why                                         |
+|--------------|------|-------------|---------------------------------------------|
+| code         | text | primary key | random, unguessable id used in `/:code`     |
+| original_url | text | not null    | where the redirect sends the user           |
+```
