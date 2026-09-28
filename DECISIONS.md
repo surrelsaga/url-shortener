@@ -113,3 +113,31 @@ e.g: http://localhost:3000/a8k2x
 | code         | text | primary key | random, unguessable id used in `/:code`     |
 | original_url | text | not null    | where the redirect sends the user           |
 ```
+
+## Decision 05: raw SQL first, Drizzle later
+
+- **Problem:** the stack includes Drizzle (an ORM), but the app only has 2 queries (insert a link, look up a link). I don't know yet what Drizzle actually solves, so adopting it now would just be following the plan.
+
+- **Options:**
+    1. Drizzle from the start: typed queries + migrations from day one
+    2. Raw SQL with `pg` only, forever: least code, fewest dependencies
+    3. Raw SQL with `pg` first (M8–M11), then switch to Drizzle (M12) and compare the diff
+
+- **Choice & why:** option 3. Feel the pain points of raw SQL first, then judge Drizzle against real problems instead of theory. With only 2 queries, raw SQL costs almost nothing to try.
+
+- **Main pain point to check in M12: changing the table.** `schema.sql` only creates the table from nothing (`CREATE TABLE`). Example: the app is live with 500 links and I add a `created_at` column:
+
+    | Step | Result |
+    |---|---|
+    | edit `schema.sql`, run it again | `ERROR: relation "urls" already exists`, so nothing changes |
+    | drop the table + rerun | column added, but **all 500 links are deleted** |
+    | hand-write `ALTER TABLE urls ADD COLUMN ...` | works, but **only on the database I ran it on** |
+    | deploy / a teammate pulls the code | they need the same `ALTER` by hand, nothing records who has it, so databases drift apart |
+
+    Drizzle migrations: I change the table in TypeScript → Drizzle generates the `ALTER` as a numbered SQL file in Git → each database records which files it has applied and runs only the missing ones → same shape everywhere, no data lost.
+
+- **Cost:** some code gets written twice (queries in M10–M11, rewritten in M12). Until M12, query results are untyped (`any`), and every query must use parameters (`$1`) by hand to stay safe from SQL injection.
+
+- **Revisit if:** the table never changes and there's only one database. Then `schema.sql` is enough, and M12 should conclude that Drizzle wasn't needed here.
+
+- **AI input:** the AI planned Drizzle from the start. I pushed back because I wanted to feel the problem before adopting the tool, and asked what exactly is wrong with `schema.sql`. That led to framing the pain point precisely: it only matters when the table changes after data exists and there are several databases.
