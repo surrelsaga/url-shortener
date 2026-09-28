@@ -126,3 +126,78 @@ database: url_shortener
 - SQL query: extract specific row/column based on the constraint in the query
 
 all design decisions of the table that relates to the API endpoints are in [here](DECISIONS.md#decision-04-design-the-urls-table-to-work-with-api-endpoints)
+
+
+## Milestone 8: Connect Fastify server to Postgres with pg (a package) to write SQL queries in node
+
+SQL query -> `pg` (npm package) -> Postgres :5432
+
+Step 0: start Postgres
+brew services start postgresql@18
+
+Step 1: install the driver (from server/)
+npm install pg
+npm install -D @types/pg
+`pg` sends your SQL to Postgres. `@types/pg` is for the type checker only.
+
+Step 2: server/.env (ignored by Git)
+DATABASE_URL=postgres://YOUR_MAC_USERNAME@localhost:5432/url_shortener
+Run whoami to get your username. There's no password, because Homebrew's Postgres trusts local connections.
+
+Step 3: server/.env.example (committed)
+DATABASE_URL=postgres://USER:PASSWORD@localhost:5432/url_shortener
+
+Step 4: load .env in the dev script (server/package.json)
+"dev": "node --env-file=.env --watch src/index.ts",
+
+Step 5: server/src/db.ts
+import pg from 'pg'
+
+const url = process.env.DATABASE_URL
+if (!url) throw new Error('DATABASE_URL is not set')
+
+export const pool = new pg.Pool({ connectionString: url })
+- Pool: keeps a few connections open and reuses them, because opening a new one per request is slow.
+- The if check: environment variables are input from outside your code, so fail loudly at startup if one is missing.
+
+Step 6: query the database in /health (server/src/index.ts)
+import { pool } from './db.ts'
+
+app.get('/health', async () => {
+  await pool.query('select 1')
+  return { status: 'ok' }
+})
+
+Test
+
+1. npm run typecheck should pass.
+2. npm run dev, then curl -i localhost:3000/health should give 200 and {"status":"ok"}.
+3. Stop Postgres (brew services stop postgresql@18) and curl again. What status do you get, and why isn't it "connection refused"?
+  - status 500, meaning internal server error, not "connection refused". Fasity is still running. It's fasitfy's connection to postgres that failed
+4. Start Postgres again and curl. Why does it recover without restarting Fastify?
+  -  Everytime there's a request to server `/heatlh`, the server will connects with Postgres again so it only depends on whether the Postgres server is still running, if it is then the fastify will connect to it succesfully if it runs again. `pool` opens a fresh connection on the next `query`.
+5. Rename .env temporarily and restart. Which line throws? Then rename it back.
+  - the database address is wrong so need to fix it
+6. git status should show .env.example but not .env.
+
+
+Why the setting up for SQLite is simpler and more natural than Postgresql
+
+```
+┌────────────────────────────┬─────────────────┬───────────────────────────────────────────────────────────┐
+│                            │     SQLite      │                         Postgres                          │
+├────────────────────────────┼─────────────────┼───────────────────────────────────────────────────────────┤
+│ Where the database lives   │ a file (app.db) │ inside a separate server program                          │
+├────────────────────────────┼─────────────────┼───────────────────────────────────────────────────────────┤
+│ To use it                  │ open the file   │ connect over the network: needs an address (DATABASE_URL) │
+├────────────────────────────┼─────────────────┼───────────────────────────────────────────────────────────┤
+│ Must be running first?     │ no              │ yes (brew services start)                                 │
+├────────────────────────────┼─────────────────┼───────────────────────────────────────────────────────────┤
+│ Handles many users at once │ limited         │ yes, which is why real web apps use it                    │
+└────────────────────────────┴─────────────────┴───────────────────────────────────────────────────────────┘
+```
+
+- Opening a connection to Postgres is slow (network + login), so the pool keeps connections open and reuses them.
+- 1 connection = 1 query at a time → the pool holds several (max 10 by default) so requests run in parallel.
+- `pool.query(sql, params)` borrows a connection, runs the SQL, gives it back.
+
