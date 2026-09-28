@@ -201,3 +201,18 @@ Why the setting up for SQLite is simpler and more natural than Postgresql
 - 1 connection = 1 query at a time → the pool holds several (max 10 by default) so requests run in parallel.
 - `pool.query(sql, params)` borrows a connection, runs the SQL, gives it back.
 
+## Milestone 9: create the urls table with hand-written SQL
+
+goal: create a urls table as designed in [here](DECISIONS.md#decision-04-design-the-urls-table-to-work-with-api-endpoints)
+
+```sql
+-- eg syntax
+CREATE TABLE table_name (
+  column_name type rules,
+  column_name type rules
+);
+```
+
+a schema is the shape of my data stored in the database. A database schema means, which tables exist, which columsn they have, and rules of each column. How are all these built or looked like.
+
+=> For now, the `schema.sql` is run once, by hand with `psql`. I created the table, postgres saved to disk. It stays there permanently. Fastify `server` is just write SQL query to insert row or update row or delete row of that table
