@@ -141,3 +141,15 @@ e.g: http://localhost:3000/a8k2x
 - **Revisit if:** the table never changes and there's only one database. Then `schema.sql` is enough, and M12 should conclude that Drizzle wasn't needed here.
 
 - **AI input:** the AI planned Drizzle from the start. I pushed back because I wanted to feel the problem before adopting the tool, and asked what exactly is wrong with `schema.sql`. That led to framing the pain point precisely: it only matters when the table changes after data exists and there are several databases.
+
+## Decision 06: short code format
+
+- **Problem:** D04 chose random codes. Still need to decide how long a code is and which characters it uses.
+
+- **Choice & why:** `randomBytes(5).toString('base64url')` over a custom alphabet loop, because it's one line of Node's built-in `crypto`
+    - 5 bytes -> always 7 chars -> ~1.1 trillion possible codes, so collisions are very rare
+    - `base64url` only uses `A-Z a-z 0-9 - _` -> URL-safe, fits in `/:code` (D03)
+    - `crypto` randomness is unguessable, `Math.random()` is not (D04's whole point)
+    - `randomBytes(n)` over `crypto.randomUUID()`: both unguessable, but a UUID is always 36 chars (longer than many original links), while `randomBytes` lets me pick the length
+
+- **Cost:** codes can contain `-` and `_`, slightly less clean to read out loud. Longer codes = fewer collisions but longer links; 7 chars is the usual trade-off for URL shorteners.

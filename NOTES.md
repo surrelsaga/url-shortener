@@ -216,3 +216,42 @@ CREATE TABLE table_name (
 a schema is the shape of my data stored in the database. A database schema means, which tables exist, which columsn they have, and rules of each column. How are all these built or looked like.
 
 => For now, the `schema.sql` is run once, by hand with `psql`. I created the table, postgres saved to disk. It stays there permanently. Fastify `server` is just write SQL query to insert row or update row or delete row of that table
+
+## Milestone 10: create-URL endpoint (`POST /api/urls`)
+
+Part 1: happy path only (generate code -> INSERT -> 201), no validation yet
+
+```ts
+const { longUrl } = request.body as { longUrl: string }; // `as` = trust me, nothing is checked
+const code = randomBytes(5).toString('base64url');      // 7 URL-safe chars
+await pool.query('INSERT INTO urls (code, original_url) VALUES ($1, $2)', [code, longUrl]);
+reply.code(201);                                         // without this Fastify sends 200
+```
+
+- `request.body`: the JSON the client sent, already parsed by Fastify (because `Content-Type: application/json`)
+- `$1, $2`: filled from the array in order. values are sent separately from the SQL -> user input can't become SQL (no SQL injection)
+- `randomBytes` (node:crypto) = unguessable. `Math.random()` is predictable, never use it for codes
+
+Break it on purpose (curl POST with different bodies):
+
+| body | status | what ended up in the db |
+|---|---|---|
+| `{"longUrl":"https://youtube.com"}` | 201 | `https://youtube.com` ✅ |
+| `{"longUrl":"hello"}` | 201 | `hello` ❌ not a url, but stored |
+| `{"longUrl":123}` | 201 | `123` ❌ a number, pg turned it into text |
+| `{}` | 500 | nothing, NOT NULL in Postgres rejected it |
+
+=> `as { longUrl: string }` protects nothing at runtime. Only the database rule (NOT NULL) caught 1 of 3 bad inputs, and it came back as a 500 (our fault) instead of 400 (client's fault)
+=> the 500 response also leaks the raw database error (`null value in column "original_url"...`) to the client -> part 2 fixes all of this with validation
+
+Bug I hit (Thunder Client): got 500 `null value in column "original_url"` -> my body used a different key than `longUrl`
+- keys must match exactly (case-sensitive). a wrong key doesn't throw, `request.body.longUrl` is just `undefined` -> NULL -> Postgres rejects
+
+JSON vs JS object:
+- JSON (the text sent over HTTP): keys and strings MUST be in double quotes -> `{ "longUrl": "https://..." }`
+- JS object (in my .ts code): quotes on keys optional -> `{ longUrl: 'https://...' }`
+- JSON is strict so any language can parse it. Fastify runs `JSON.parse()` on the body, invalid JSON -> 400 before my handler runs. after parsing it's a normal JS object
+
+Raw SQL pain points so far:
+- `schema.sql` only creates from nothing, changing a live table is manual on every db (see [D05](DECISIONS.md#decision-05-raw-sql-first-drizzle-later))
+- query results are `any`, and SQL strings aren't checked by TypeScript (typo in a column name = runtime error)
