@@ -285,3 +285,19 @@ Same break-it tests again:
 
 => bad input never reaches the database anymore. every client mistake = 400 with a message that says what to fix
 => 2 layers now: my validation (first check) + Postgres NOT NULL / primary key (last check)
+
+Part 3: collisions (retry when the code is already taken)
+
+generate code -> INSERT -> success? return it
+                        -> Postgres error `23505` (unique_violation, primary key taken)? -> new code, try again (max 3)
+                        -> any other error (e.g. db down)? -> rethrow -> 500
+
+- the database decides if a code is taken (primary key), not a "check then insert" in TS -> no race condition (D04)
+- max 3 attempts: with ~1.1 trillion codes, 3 collisions in a row = a bug (e.g. generator broken), not bad luck -> stop instead of looping forever
+- `(error as { code?: string }).code`: pg errors aren't typed, so I read Postgres's error code with a cast
+
+How I tested a path that almost never runs (forced collision):
+1. inserted a row with code `forced1` by hand
+2. temporarily made `generateCode()` return `forced1` first -> POST still got 201 with a different code (retry worked)
+3. made it always return `forced1` -> POST got 500 `could not generate a unique short code` (limit works, no infinite loop)
+4. removed the temp code, deleted only my test rows

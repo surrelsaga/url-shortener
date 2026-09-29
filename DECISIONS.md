@@ -168,3 +168,32 @@ e.g: http://localhost:3000/a8k2x
 - **Cost:** more fields later = more hand-written `if`s. Invalid JSON is still rejected by Fastify with its own format (happens before my handler runs).
 
 - **Revisit if:** the API grows to many fields or many routes, then a schema is less code than hand checks.
+
+## Decision 08: when a short code can't be generated, throw and let Fastify send 500
+
+- **Problem:** `insertWithUniqueCode` can fail (3 collisions in a row, or the database is down). What happens then, and what does the user receive?
+
+- **Choice & why:** `throw` an Error instead of returning a special value. The error travels up by itself through `await`, and Fastify turns it into a 500, so I don't write error-passing code in every function.
+
+    How the error goes up:
+    ```
+    throw new Error(...)          inside insertWithUniqueCode (async)  -> its promise REJECTS with the Error
+       ↓
+    await insertWithUniqueCode()  in the POST handler                  -> await RE-THROWS the Error on this line,
+       ↓                                                                  the rest of the handler never runs
+    POST handler (async)                                               -> its promise rejects too
+       ↓
+    Fastify                        awaits every handler, catches it    -> sends 500
+    ```
+
+    What the client receives:
+    ```
+    500 { "statusCode": 500, "error": "Internal Server Error", "message": "could not generate a unique short code" }
+    ```
+    Nothing is saved. Not the user's fault (that would be 400), and retrying will almost surely work.
+
+    Without `await`, `code` would be a Promise (not a string) -> handler would still reply 201 with `http://localhost:3000/[object Promise]`, and the error would get lost. TypeScript catches this (`Promise<string>` is not `string`).
+
+- **Cost:** the 500 uses Fastify's format (`{ statusCode, error, message }`), not D03's `{ error }`, and for other failures (e.g. database down) `message` leaks the raw database error to the client.
+
+- **Revisit if:** before the frontend (M13): add a Fastify error handler that sends `500 { "error": "Something went wrong" }` and keeps the details in the server log only.
