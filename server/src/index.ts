@@ -54,4 +54,21 @@ app.post('/api/urls', async (request, reply) => {
     return { shortUrl: `http://localhost:3000/${code}` }; // ponytail: hardcoded host, move to env var at deploy
 })
 
+// Follow a short URL: GET /:code -> 302 to the original url | 404 (D03)
+// Registered after /health: Fastify tries exact paths first, so /health never reaches here
+app.get<{ Params: { code: string } }>('/:code', async (request, reply) => {
+    const { code } = request.params; // the part after "/", e.g. "a8K2x"
+
+    const result = await pool.query('SELECT original_url FROM urls WHERE code = $1', [code]);
+    const originalUrl = result.rows[0]?.original_url; // no row -> undefined
+
+    if (!originalUrl) {
+        // a person sees this in the browser, so plain text instead of JSON (D09)
+        return reply.code(404).type('text/plain').send('Short link not found');
+    }
+
+    // 302 + Location header, the browser goes there by itself (302 not 301: see D03)
+    return reply.redirect(originalUrl, 302);
+})
+
 await app.listen({ port: 3000 });

@@ -301,3 +301,28 @@ How I tested a path that almost never runs (forced collision):
 2. temporarily made `generateCode()` return `forced1` first -> POST still got 201 with a different code (retry worked)
 3. made it always return `forced1` -> POST got 500 `could not generate a unique short code` (limit works, no infinite loop)
 4. removed the temp code, deleted only my test rows
+
+## Milestone 11: redirect endpoint (`GET /:code`)
+
+```ts
+app.get<{ Params: { code: string } }>('/:code', async (request, reply) => {
+    const { code } = request.params;                         // "/a8K2x" -> code = "a8K2x"
+    const result = await pool.query('SELECT original_url FROM urls WHERE code = $1', [code]);
+    const originalUrl = result.rows[0]?.original_url;         // no row -> undefined
+    if (!originalUrl) return reply.code(404).type('text/plain').send('Short link not found');
+    return reply.redirect(originalUrl, 302);                  // 302 + Location header
+})
+```
+
+- `:code` = route parameter, matches any single path segment, Fastify puts its value in `request.params.code`
+- `app.get<{ Params: { code: string } }>`: tells TS the shape of `request.params` (a string from the URL path, always there if the route matched)
+- `result.rows` = array of matching rows (`any`, pg isn't typed) -> 0 rows = code doesn't exist
+- `reply.redirect(url, 302)` = `reply.code(302).header('Location', url)`, no body. the browser follows `Location` by itself
+- `/health` still works: Fastify tries exact paths before `/:code`. (so a generated code `health` could never be reached, chance ~0)
+
+Tested with curl:
+- existing code -> `302` + `location: https://example.com/redirect-test`
+- `curl -L` (follow like a browser) -> ends up at the original url
+- unknown code -> `404`, `text/plain`, `Short link not found`
+
+Raw SQL pain point: `result.rows[0]?.original_url` is `any` -> a typo like `.orginal_url` would just be `undefined` at runtime, no TS error -> every link would look "not found"

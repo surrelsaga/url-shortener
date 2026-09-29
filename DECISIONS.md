@@ -197,3 +197,18 @@ e.g: http://localhost:3000/a8k2x
 - **Cost:** the 500 uses Fastify's format (`{ statusCode, error, message }`), not D03's `{ error }`, and for other failures (e.g. database down) `message` leaks the raw database error to the client.
 
 - **Revisit if:** before the frontend (M13): add a Fastify error handler that sends `500 { "error": "Something went wrong" }` and keeps the details in the server log only.
+
+## Decision 09: what a person sees when a short link doesn't exist
+
+- **Problem:** `GET /:code` is opened by a person in a browser (not by our React code). What should an unknown code show?
+
+- **Options:**
+    1. `404` plain text: `Short link not found`
+    2. `404` JSON `{ "error": "..." }`, same shape as the API (D03)
+    3. `302` redirect to our React app, which shows a friendly message
+
+- **Choice & why:** option 1. A person reads it in a browser, so plain text is readable while JSON looks broken. Keeps the correct `404` status, and needs no frontend work.
+
+- **Cost:** plain and unstyled, no link back to the app. Differs from the API's JSON errors (fine: this route isn't the API, D03).
+
+- **Revisit if:** the frontend is done and a styled "not found" page is worth it -> option 3.
