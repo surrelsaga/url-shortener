@@ -255,3 +255,33 @@ JSON vs JS object:
 Raw SQL pain points so far:
 - `schema.sql` only creates from nothing, changing a live table is manual on every db (see [D05](DECISIONS.md#decision-05-raw-sql-first-drizzle-later))
 - query results are `any`, and SQL strings aren't checked by TypeScript (typo in a column name = runtime error)
+
+Part 2: validation (400 for bad input)
+
+```ts
+const { longUrl } = (request.body ?? {}) as { longUrl?: unknown }; // honest type: could be anything
+if (typeof longUrl !== 'string' || !isWebUrl(longUrl)) {          // after this line TS knows it's a string
+    reply.code(400);
+    return { error: 'longUrl must be an http(s) URL' };
+}
+```
+
+- `unknown` instead of `string`: TS forces me to check before using it. `as { longUrl: string }` was a lie, `unknown` is the truth
+- `request.body ?? {}`: no body at all -> body is `undefined`, `?? {}` avoids the "cannot destructure" crash
+- `isWebUrl`: `URL.parse(value)` returns `null` if it's not a URL at all, otherwise check `protocol` is `http:` or `https:` (allowlist)
+- `typeof longUrl !== 'string'` -> TS narrows the type, so after the `if` it's a real `string` (no cast needed)
+
+Same break-it tests again:
+
+| body | before (part 1) | now |
+|---|---|---|
+| `{"longUrl":"https://youtube.com"}` | 201 | 201 |
+| `{"longUrl":"hello"}` | 201, stored ❌ | 400 |
+| `{"longUrl":123}` | 201, stored ❌ | 400 |
+| `{}` / wrong key / `null` / no body | 500, leaked db error ❌ | 400 |
+| `{"longUrl":"javascript:alert(1)"}` | 201, stored ❌ | 400 |
+| `{"longUrl":"ftp://..."}` | 201, stored ❌ | 400 |
+| `{longUrl:"x"}` (invalid JSON) | 400 from Fastify | 400 from Fastify (its own error format, before my handler) |
+
+=> bad input never reaches the database anymore. every client mistake = 400 with a message that says what to fix
+=> 2 layers now: my validation (first check) + Postgres NOT NULL / primary key (last check)

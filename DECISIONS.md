@@ -153,3 +153,18 @@ e.g: http://localhost:3000/a8k2x
     - `randomBytes(n)` over `crypto.randomUUID()`: both unguessable, but a UUID is always 36 chars (longer than many original links), while `randomBytes` lets me pick the length
 
 - **Cost:** codes can contain `-` and `_`, slightly less clean to read out loud. Longer codes = fewer collisions but longer links; 7 chars is the usual trade-off for URL shorteners.
+
+## Decision 07: validate input by hand in the handler
+
+- **Problem:** `POST /api/urls` stored anything (`hello`, `123`, `javascript:...`) and crashed with 500 on a missing field. Need a 400 that matches the D03 contract: `{ "error": "..." }`.
+
+- **Options:**
+    1. check by hand inside the handler: `typeof` + `URL.parse` + protocol allowlist
+    2. Fastify's built-in JSON schema validation (`schema: { body: ... }`)
+
+- **Choice & why:** option 1. Only 1 field to check, and a schema can only check "is it a string", not "is it http(s)", so I'd need the manual check anyway. Also Fastify's schema errors come in its own format (`{ statusCode, code, error, message }`), not the `{ error }` from D03, so I'd need extra code to reshape them.
+    - `URL.parse(str)`: built into JS, turns a string into a URL object (or `null` if it's not a URL). Properties: `.protocol`, `.hostname`, `.port`, `.pathname`, `.search`, `.hash`
+
+- **Cost:** more fields later = more hand-written `if`s. Invalid JSON is still rejected by Fastify with its own format (happens before my handler runs).
+
+- **Revisit if:** the API grows to many fields or many routes, then a schema is less code than hand checks.

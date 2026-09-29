@@ -10,9 +10,21 @@ app.get('/health', async () => {
     return { status: "ok" };
 })
 
-// Create a short URL: { longUrl } -> 201 { shortUrl }
+// Only web links are allowed: blocks "hello", javascript:, ftp:, ... (allowlist, D03)
+function isWebUrl(value: string) {
+    const protocol = URL.parse(value)?.protocol; // URL.parse returns null if it's not a URL at all
+    return protocol === 'http:' || protocol === 'https:';
+}
+
+// Create a short URL: { longUrl } -> 201 { shortUrl } | 400 { error }
 app.post('/api/urls', async (request, reply) => {
-    const { longUrl } = request.body as { longUrl: string }; // ponytail: unchecked input, validated in part 2
+    // body comes from the client = untrusted, so treat longUrl as `unknown` until checked
+    const { longUrl } = (request.body ?? {}) as { longUrl?: unknown };
+    if (typeof longUrl !== 'string' || !isWebUrl(longUrl)) {
+        reply.code(400);
+        return { error: 'longUrl must be an http(s) URL' };
+    }
+
     // 5 random bytes -> 7 URL-safe chars (A-Z a-z 0-9 - _), unguessable
     const code = randomBytes(5).toString('base64url');
 
