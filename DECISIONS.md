@@ -279,3 +279,20 @@ e.g: http://localhost:3000/a8k2x
 - **Revisit if:** honest verdict for this app: blind spots 1 & 2 only matter for 2 queries, so the real win is 3, migrations, starting at deploy (M16): `npm run db:migrate` builds the new database instead of hand-running SQL.
 
 - **AI input:** I asked to feel the pain with raw SQL first (D05). The AI's forced-collision test from M10 is what caught the wrapped-error bug during the switch, a regression that normal requests would never show.
+
+## Decision 11: frontend reaches the API through a Vite proxy, not CORS
+
+- **Problem:** React runs on `localhost:5173`, Fastify on `localhost:3000`. Different port = different **origin**, and browsers block JS from reading responses from another origin unless the server allows it (CORS).
+
+- **Options:**
+    1. Vite dev proxy: React calls `/api/urls` on :5173, Vite forwards it to :3000 -> browser only sees one origin
+    2. CORS on the backend: install `@fastify/cors`, allow `http://localhost:5173`
+
+- **Choice & why:** option 1. One line of Vite config, no new dependency, no backend change. React uses a relative path (`fetch('/api/urls')`), no hardcoded host.
+
+    ```
+    browser ──/api/urls──▶ Vite :5173 ──proxy──▶ Fastify :3000
+            (same origin, no CORS)
+    ```
+
+- **Cost:** the proxy only exists in `npm run dev`. In production, frontend and API must again share one origin (e.g. Fastify serves the built React files) or I add CORS -> decided at deploy (M16).

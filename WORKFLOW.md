@@ -102,3 +102,32 @@ edit src/schema.ts
 | `DATABASE_URL is not set` on startup | no `.env` | step 7 |
 | `relation "urls" does not exist` | table not created in this database | `npm run db:migrate` |
 | `400` | my request is wrong (key must be `longUrl`, value an http(s) URL) | the request body |
+
+## 2. Frontend
+
+### Setup
+
+```bash
+cd client
+npm install
+npm run dev          # React on :5173 (backend must be running on :3000)
+```
+Open `http://localhost:5173`.
+
+### How it talks to the backend
+
+```
+browser (:5173) ──fetch('/api/urls')──▶ Vite dev server ──proxy──▶ Fastify (:3000)
+```
+- only `/api/...` is proxied (`client/vite.config.ts`), so the browser never talks to another origin (D11)
+- the short link itself (`http://localhost:3000/a8K2x`) goes straight to Fastify, not through Vite
+
+### Files
+
+```
+client/
+├── src/App.tsx       the whole UI: input, button, fetch, show result
+├── src/main.tsx      mounts <App /> into index.html
+├── index.html        the one HTML page
+└── vite.config.ts    React plugin + /api proxy
+```

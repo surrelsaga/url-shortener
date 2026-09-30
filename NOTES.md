@@ -356,3 +356,29 @@ Raw SQL pain points, checked:
 - ❌ error codes -> still a cast, and now nested in `error.cause` (the bug below)
 
 Bug: after the switch, the forced collision returned 500 instead of retrying. Drizzle wraps pg's error, so `error.code` was `undefined` -> fix: `error.cause?.code`. Lesson: rewriting code can break a path that almost never runs, re-run the forced test after refactors.
+
+## Milestone 13: connect React to the API
+
+```tsx
+const [longUrl, setLongUrl] = useState('')   // state = what React remembers; changing it re-renders
+const response = await fetch('/api/urls', {  // the same POST as curl, sent by the browser
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ longUrl }),         // JS object -> JSON text
+})
+const data = await response.json()           // JSON text -> JS object
+setShortUrl(data.shortUrl)                   // new state -> React shows the link
+```
+
+- `<form onSubmit>`: Enter key submits for free. `event.preventDefault()` stops the browser's default (reload the page)
+- `<input type="url" required>`: the browser blocks empty / non-URL input before sending. UX only, the server still validates (anyone can skip the browser with curl)
+- controlled input: `value={longUrl}` + `onChange` -> React state is always what's typed
+- `{shortUrl && <p>...}`: render only when there's a result
+- CORS: :5173 and :3000 are different origins -> Vite proxy forwards `/api` to :3000 (D11)
+
+Full flow now:
+```
+type url → click Shorten → fetch POST /api/urls (:5173) → Vite proxy → Fastify (:3000) → Drizzle → Postgres
+        ← React shows link ← setShortUrl ← 201 { shortUrl } ←──────────────────────────────────────┘
+click the link → GET :3000/a8K2x → 302 → original page
+```
