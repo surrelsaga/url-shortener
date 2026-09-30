@@ -1,12 +1,14 @@
-/* Pixel style: square corners, thick borders, hard shadows, pixel font. Colors from the url.svg icon. */
+/* Pixel style, kept quiet: warm paper, dark ink, one soft accent.
+   Pixel font only for headings/labels/buttons; typed text stays in a readable monospace. */
 :root {
-  --bg: #0b1a12;
-  --paper: #f7fcff;
-  --ink: #003414;
-  --green: #03ad3e;
-  --muted: #6f8579;
-  --red: #c8102e;
-  font-family: 'Press Start 2P', monospace;
+  --paper: #f3efe6;
+  --card: #fffdf8;
+  --ink: #2b2b2b;
+  --muted: #8a857c;
+  --accent: #4f7a5a;
+  --red: #a8433a;
+  --pixel: 'Press Start 2P', monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   color: var(--ink);
 }
 
@@ -18,78 +20,64 @@ body {
   display: grid;
   place-items: center;
   padding: 16px;
-  background-color: var(--bg);
-  /* faint 16px grid, like a pixel canvas */
-  background-image:
-    linear-gradient(#ffffff0a 2px, transparent 2px),
-    linear-gradient(90deg, #ffffff0a 2px, transparent 2px);
-  background-size: 16px 16px;
+  background: var(--paper);
 }
 
-.app { width: 100%; max-width: 560px; display: grid; gap: 28px; }
+/* #root is React's mount div (index.html). It's what gets centered, so it sets the width */
+#root { width: min(100%, 520px); }
+.app { display: grid; gap: 24px; }
 
-h1 {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 18px;
-  color: var(--paper);
-  text-shadow: 3px 3px 0 var(--green);
-}
+h1 { margin: 0; font-family: var(--pixel); font-size: 16px; font-weight: normal; }
 
-/* a box = a pixel "window" */
+/* a box: square corners, solid border, small hard shadow */
 .panel {
   margin: 0;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   padding: 16px;
-  background: var(--paper);
-  border: 4px solid var(--ink);
-  box-shadow: 8px 8px 0 #000;
+  background: var(--card);
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
 }
 
-.panel-title { margin: 0; font-size: 10px; text-transform: uppercase; color: var(--green); }
+.panel-title { margin: 0; font-family: var(--pixel); font-size: 9px; font-weight: normal; color: var(--muted); }
 
-.row { display: flex; gap: 10px; align-items: center; }
+.row { display: flex; gap: 8px; align-items: center; }
 
 input {
   flex: 1;
   min-width: 0;
-  padding: 12px;
+  padding: 10px;
   font: inherit;
-  font-size: 11px;
+  font-size: 14px;
   color: var(--ink);
   background: #fff;
-  border: 3px solid var(--ink);
+  border: 2px solid var(--ink);
 }
 
 button {
-  padding: 12px 14px;
-  font: inherit;
-  font-size: 11px;
-  color: #fff;
-  background: var(--green);
-  border: 3px solid var(--ink);
-  box-shadow: 4px 4px 0 var(--ink);
+  padding: 10px 12px;
+  font-family: var(--pixel);
+  font-size: 10px;
+  color: var(--card);
+  background: var(--ink);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--accent);
   cursor: pointer;
 }
-/* "pressed" look: the button drops into its shadow */
-button:active:not(:disabled) { transform: translate(4px, 4px); box-shadow: none; }
-button:disabled { background: var(--muted); cursor: wait; }
+button:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: none; }
+button:disabled { opacity: 0.5; cursor: wait; }
 
-.result { flex: 1; min-width: 0; font-size: 11px; line-height: 1.8; color: var(--ink); word-break: break-all; }
-.hint, .error { margin: 0; font-size: 10px; line-height: 1.8; }
+.result { flex: 1; min-width: 0; font-size: 14px; color: var(--accent); word-break: break-all; }
+.hint, .error { margin: 0; font-size: 13px; }
 .hint { color: var(--muted); }
 .error { color: var(--red); }
 
-input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px dashed var(--green); outline-offset: 3px; }
+input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px dashed var(--accent); outline-offset: 3px; }
 
-footer { font-size: 8px; line-height: 2; text-align: center; color: #9fb3a7; }
+footer { font-size: 11px; text-align: center; color: var(--muted); }
 footer a { color: inherit; }
 
-/* phones: stack input and button */
 @media (max-width: 480px) {
   .row { flex-direction: column; align-items: stretch; }
-  h1 { font-size: 14px; }
 }

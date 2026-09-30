@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react'
-import icon from './url.svg' // Vite turns this into the built file's URL
 
 function App() {
   // state: what React remembers between renders. Changing it re-renders the page.
@@ -47,10 +46,7 @@ function App() {
 
   return (
     <main className="app">
-      <h1>
-        <img src={icon} alt="" width={32} height={32} />
-        URL Shortener
-      </h1>
+      <h1>URL Shortener</h1>
 
       {/* box 1: the long URL. <form> = Enter submits. type="url" + required = browser checks first (UX only, server still validates) */}
       <form className="panel" onSubmit={handleSubmit}>
