@@ -1,10 +1,21 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyError } from 'fastify';
 import { randomBytes } from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { db } from './db.ts';
 import { urls } from './schema.ts';
 
 const app = Fastify({ logger: true });
+
+// Every error not handled inside a route ends up here (D12)
+app.setErrorHandler<FastifyError>((error, request, reply) => {
+    // Fastify's own client errors (e.g. invalid JSON = 400): keep the status, use our { error } shape
+    if (error.statusCode && error.statusCode < 500) {
+        return reply.code(error.statusCode).send({ error: error.message });
+    }
+    // our fault (bug, database down, 3 collisions): full details in the log, generic message to the client
+    request.log.error(error);
+    return reply.code(500).send({ error: 'Something went wrong' });
+});
 
 app.get('/health', async () => {
     // raw SQL still possible when needed, via the sql`` tag
