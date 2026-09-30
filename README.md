@@ -1,26 +1,55 @@
-## URL Shortener
+# URL Shortener
 
-learning project
+Paste a long URL, get a short one. Opening the short link redirects to the original.
 
-| # | Milestone | Status |
-|---|---|---|
-| 1 | Initialize repository (.gitignore, README, NOTES, DECISIONS) | done |
-| 2 | Frontend scaffold: React + Vite in `client/` | done |
-| 3 | Fastify server in `server/` | done |
-| 4 | First endpoint: health check | done |
-| 5 | HTTP request/response flow, API contract | done |
-| 6 | Install PostgreSQL | done |
-| 7 | Database concepts, designing the `urls` table | done |
-| 8 | Connect Fastify to Postgres with `pg` (raw SQL) | done |
-| 9 | Create the `urls` table with a hand-written `schema.sql` | done |
-| 10 | Create-URL endpoint (raw SQL `INSERT`) | done |
-| 11 | Redirect endpoint (raw SQL `SELECT`) | done |
-| 12 | Switch to Drizzle: schema, migrations, rewrite both queries | done |
-| 13 | Connect React to the API | done |
-| 14 | Loading and error states | done |
-| 15 | Test the complete app | next |
-| 16 | Deploy ([live](https://dan-shorten-url.onrender.com)) | ✅ done |
-| 17 | Final README | 👉 next |
+My first full-stack app, built as a learning project: React → Fastify → Drizzle → PostgreSQL.
+
+**Live:** https://dan-shorten-url.onrender.com
+
+## Project structure
+
+```
+url-shortener/
+├── client/                 frontend (React + TypeScript + Vite)
+│   ├── src/App.tsx         the whole UI: input box, output box, calls the API
+│   ├── src/index.css       styles
+│   └── vite.config.ts      dev server, forwards /api to the backend
+├── server/                 backend (Node + TypeScript + Fastify)
+│   ├── src/index.ts        routes: POST /api/urls (create), GET /:code (redirect), /health
+│   ├── src/db.ts           database connection
+│   ├── src/schema.ts       the urls table (Drizzle)
+│   ├── drizzle/            migrations generated from schema.ts
+│   └── test/api.test.ts    end-to-end API test
+├── DECISIONS.md
+├── NOTES.md
+└── WORKFLOW.md
+```
+
+## Docs
+
+- **DECISIONS.md**: every design decision I made, with the options, why I chose one, and what it cost.
+- **NOTES.md**: what I learned at each milestone, the bugs I hit, and how I fixed them.
+- **WORKFLOW.md**: full setup, how a request flows through the app, and how to deploy.
+
+## Run locally
+
+Needs Node 24 and PostgreSQL.
+
+```bash
+createdb url_shortener
+
+cd server
+npm install
+cp .env.example .env     # set DATABASE_URL=postgres://<your-user>@localhost:5432/url_shortener
+npm run db:migrate       # create the table
+npm run dev              # API on http://localhost:3000
+
+cd ../client             # in a second terminal
+npm install
+npm run dev              # app on http://localhost:5173
+```
+
+Details, troubleshooting and deployment: see WORKFLOW.md.
 
 ## Credits
 
