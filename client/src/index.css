@@ -1,0 +1,95 @@
+/* Pixel style: square corners, thick borders, hard shadows, pixel font. Colors from the url.svg icon. */
+:root {
+  --bg: #0b1a12;
+  --paper: #f7fcff;
+  --ink: #003414;
+  --green: #03ad3e;
+  --muted: #6f8579;
+  --red: #c8102e;
+  font-family: 'Press Start 2P', monospace;
+  color: var(--ink);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background-color: var(--bg);
+  /* faint 16px grid, like a pixel canvas */
+  background-image:
+    linear-gradient(#ffffff0a 2px, transparent 2px),
+    linear-gradient(90deg, #ffffff0a 2px, transparent 2px);
+  background-size: 16px 16px;
+}
+
+.app { width: 100%; max-width: 560px; display: grid; gap: 28px; }
+
+h1 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  color: var(--paper);
+  text-shadow: 3px 3px 0 var(--green);
+}
+
+/* a box = a pixel "window" */
+.panel {
+  margin: 0;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: var(--paper);
+  border: 4px solid var(--ink);
+  box-shadow: 8px 8px 0 #000;
+}
+
+.panel-title { margin: 0; font-size: 10px; text-transform: uppercase; color: var(--green); }
+
+.row { display: flex; gap: 10px; align-items: center; }
+
+input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--ink);
+  background: #fff;
+  border: 3px solid var(--ink);
+}
+
+button {
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 11px;
+  color: #fff;
+  background: var(--green);
+  border: 3px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  cursor: pointer;
+}
+/* "pressed" look: the button drops into its shadow */
+button:active:not(:disabled) { transform: translate(4px, 4px); box-shadow: none; }
+button:disabled { background: var(--muted); cursor: wait; }
+
+.result { flex: 1; min-width: 0; font-size: 11px; line-height: 1.8; color: var(--ink); word-break: break-all; }
+.hint, .error { margin: 0; font-size: 10px; line-height: 1.8; }
+.hint { color: var(--muted); }
+.error { color: var(--red); }
+
+input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px dashed var(--green); outline-offset: 3px; }
+
+footer { font-size: 8px; line-height: 2; text-align: center; color: #9fb3a7; }
+footer a { color: inherit; }
+
+/* phones: stack input and button */
+@media (max-width: 480px) {
+  .row { flex-direction: column; align-items: stretch; }
+  h1 { font-size: 14px; }
+}

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import icon from './url.svg' // Vite turns this into the built file's URL
 
 function App() {
   // state: what React remembers between renders. Changing it re-renders the page.
@@ -6,6 +7,7 @@ function App() {
   const [shortUrl, setShortUrl] = useState('') // what the server sent back
   const [loading, setLoading] = useState(false) // request in flight
   const [error, setError] = useState('')        // message shown to the user (D12)
+  const [copied, setCopied] = useState(false)   // show "Copied!" for a moment
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault() // a form's default is to reload the page, stop that
@@ -37,41 +39,60 @@ function App() {
     }
   }
 
-  return (
-    <main>
-      <h1>URL Shortener</h1>
+  async function copyShortUrl() {
+    await navigator.clipboard.writeText(shortUrl) // browser API, works on https and localhost
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+  }
 
-      {/* <form> gives Enter-to-submit for free. type="url" + required = the browser checks it first (UX only, the server still validates) */}
-      <form onSubmit={handleSubmit}>
-        <input
-          type="url"
-          required
-          placeholder="https://example.com/some/long/url"
-          value={longUrl}
-          onChange={(event) => setLongUrl(event.target.value)}
-        />
-        {/* disabled while loading: a double click can't create 2 links */}
-        <button type="submit" disabled={loading}>
-          {loading ? 'Shortening…' : 'Shorten'}
-        </button>
+  return (
+    <main className="app">
+      <h1>
+        <img src={icon} alt="" width={32} height={32} />
+        URL Shortener
+      </h1>
+
+      {/* box 1: the long URL. <form> = Enter submits. type="url" + required = browser checks first (UX only, server still validates) */}
+      <form className="panel" onSubmit={handleSubmit}>
+        <label className="panel-title" htmlFor="long-url">Long URL</label>
+        <div className="row">
+          <input
+            id="long-url"
+            type="url"
+            required
+            placeholder="https://example.com/some/long/url"
+            value={longUrl}
+            onChange={(event) => setLongUrl(event.target.value)}
+          />
+          {/* disabled while loading: a double click can't create 2 links */}
+          <button type="submit" disabled={loading}>
+            {loading ? '...' : 'Shorten'}
+          </button>
+        </div>
       </form>
 
-      {/* role="alert": screen readers announce the error when it appears */}
-      {error && <p role="alert">{error}</p>}
-
-      {shortUrl && (
-        <p>
-          Shortened URL: <a href={shortUrl}>{shortUrl}</a>
-        </p>
-      )}
+      {/* box 2: the result, or the error, or a hint */}
+      <section className="panel">
+        <h2 className="panel-title">Short URL</h2>
+        {error ? (
+          <p className="error" role="alert">{error}</p> // role="alert": screen readers announce it
+        ) : shortUrl ? (
+          <div className="row">
+            <a className="result" href={shortUrl}>{shortUrl}</a>
+            <button type="button" onClick={copyShortUrl}>
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        ) : (
+          <p className="hint">Your short link will appear here</p>
+        )}
+      </section>
 
       {/* icon license requires attribution. rel="noopener noreferrer": the opened tab can't control this page */}
       <footer>
-        <small>
-          Icon: <a href="https://iconscout.com/icons/url" target="_blank" rel="noopener noreferrer">url</a> by{' '}
-          <a href="https://iconscout.com/contributors/flowicon" target="_blank" rel="noopener noreferrer">Flowicon</a> on{' '}
-          <a href="https://iconscout.com" target="_blank" rel="noopener noreferrer">IconScout</a>
-        </small>
+        Icon: <a href="https://iconscout.com/icons/url" target="_blank" rel="noopener noreferrer">url</a> by{' '}
+        <a href="https://iconscout.com/contributors/flowicon" target="_blank" rel="noopener noreferrer">Flowicon</a> on{' '}
+        <a href="https://iconscout.com" target="_blank" rel="noopener noreferrer">IconScout</a>
       </footer>
     </main>
   )
