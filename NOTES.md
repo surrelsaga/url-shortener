@@ -382,3 +382,38 @@ type url → click Shorten → fetch POST /api/urls (:5173) → Vite proxy → F
         ← React shows link ← setShortUrl ← 201 { shortUrl } ←──────────────────────────────────────┘
 click the link → GET :3000/a8K2x → 302 → original page
 ```
+
+## Milestone 14: loading and error states
+
+Backend: one error handler for everything not handled in a route
+```ts
+app.setErrorHandler<FastifyError>((error, request, reply) => {
+    if (error.statusCode && error.statusCode < 500) return reply.code(error.statusCode).send({ error: error.message });
+    request.log.error(error);                                   // details -> log only
+    return reply.code(500).send({ error: 'Something went wrong' }); // generic -> client
+});
+```
+
+Frontend: 4 states (idle / loading / success / error)
+```tsx
+setLoading(true)
+try {
+  const response = await fetch(...)                 // throws if no response at all
+  const data = await response.json()                // throws if body isn't JSON (proxy error page)
+  if (response.ok) setShortUrl(data.shortUrl)      // 2xx
+  else if (response.status < 500) setError(data.error)  // 4xx: server's reason
+  else setError('Something went wrong, please try again') // 5xx
+} catch { setError("Can't reach the server, please try again") }
+finally { setLoading(false) }                       // always runs, success or failure
+```
+
+- `fetch` does NOT throw on 400/500, those are still responses -> check `response.ok` / `response.status`. it only throws when there's no response
+- `<button disabled={loading}>`: no double click -> no duplicate links
+- `<p role="alert">`: screen readers read the error out when it appears
+
+Tested:
+- `ftp://files.example.com` (passes the browser's URL check) -> 400 -> server's message
+- database unreachable (scratch copy) -> `500 { "error": "Something went wrong" }`, full `ECONNREFUSED` only in the log
+- backend down (proxy to a dead port) -> Vite proxy `502` with empty body -> `.json()` throws -> "Can't reach the server"
+
+All errors and what the user sees: D12

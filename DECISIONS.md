@@ -296,3 +296,47 @@ e.g: http://localhost:3000/a8k2x
     ```
 
 - **Cost:** the proxy only exists in `npm run dev`. In production, frontend and API must again share one origin (e.g. Fastify serves the built React files) or I add CORS -> decided at deploy (M16).
+
+## Decision 12: every error the product can hit, and what the user sees
+
+- **Problem:** so far the UI only handled success. Each layer can fail differently, and the user needs a message they can act on, without seeing our internals.
+
+- **All errors:**
+
+    | # | What happens | Caught by | Cause | Response | User sees |
+    |---|---|---|---|---|---|
+    | 1 | empty input / not a URL (`hello`) | browser (`type="url" required`) | user typo | no request sent | browser's own hint on the input |
+    | 2 | URL but not a web link (`ftp://`, `javascript:`) | server validation (D07) | user | `400 { error }` | server's message: "longUrl must be an http(s) URL" |
+    | 3 | invalid JSON / missing field (only from curl etc., not our UI) | Fastify / validation | the client | `400 { error }` | (not reachable from the UI) |
+    | 4 | bug, database down, 3 code collisions (D08) | error handler | **us** | `500 { "error": "Something went wrong" }`, details only in the server log | "Something went wrong, please try again" |
+    | 5 | server not running / network down | `fetch` throws (dev: proxy sends `502` with no body) | nobody's code | no usable response | "Can't reach the server, please try again" |
+    | 6 | short link doesn't exist | `GET /:code` | old or mistyped link | `404` plain text (D09) | "Short link not found" (browser page, not React) |
+
+- **Choice & why:** the message depends on **who can fix it**:
+    - `4xx` -> the user can fix it -> show the server's reason
+    - `5xx` -> only we can fix it -> generic message, never leak internals (was leaking database errors, D08)
+    - no response -> nobody's code failed -> say we can't connect, suggest retry
+    - while loading: button disabled + "Shortening…" -> no double submit = no duplicate links
+
+- **How (backend): `app.setErrorHandler(fn)`**, a built-in Fastify method like `app.get`/`app.post`: I give Fastify a function, Fastify calls it whenever anything throws (in a route, or in Fastify itself like invalid JSON). Its job: turn a crash into a normal HTTP response.
+
+    | | without `setErrorHandler` (Fastify's default) | with it |
+    |---|---|---|
+    | 500 body | `{ statusCode, error, message }`, `message` = raw database error ❌ leak | `{ "error": "Something went wrong" }` |
+    | details | sent to the client | only in the server log |
+    | Fastify's 400 (invalid JSON) | `{ statusCode, code, error, message }` | `{ "error": "..." }` |
+    | React | needs a special case per shape | always reads `data.error` |
+
+    ```
+    throw (db down) → handler rejects → Fastify catches → calls MY error handler
+      → log details + reply 500 { error } ──HTTP──▶ React: fetch gets a normal response (no throw),
+                                                    status 500 → "Something went wrong, please try again"
+    ```
+    Only "server not running" skips all this: nothing can respond, so `fetch` throws -> React's `catch`.
+
+    Clearing up a misunderstanding: **without the handler, the server does NOT crash.** Fastify always catches route errors and uses its default handler: still a `500`, server keeps running. The only difference is the JSON body:
+    - opening the API directly (browser tab / curl) -> you'd see that raw JSON, with the leaked database error
+    - in our app -> React fetches in the background, the user never sees raw JSON, only the message React renders. But the leak is still visible to anyone in DevTools → Network
+    - what really crashes the process: errors **outside** a request (e.g. `DATABASE_URL is not set` at startup, a promise nobody `await`s)
+
+- **Cost:** a user hitting #4 gets no detail, so debugging needs the server log. Browser check (#1) is UX only: curl skips it, so the server still validates everything.

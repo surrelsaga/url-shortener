@@ -16,8 +16,8 @@ learning project
 | 10 | Create-URL endpoint (raw SQL `INSERT`) | done |
 | 11 | Redirect endpoint (raw SQL `SELECT`) | done |
 | 12 | Switch to Drizzle: schema, migrations, rewrite both queries | done |
-| 13 | Connect React to the API | 👉 next |
-| 14 | Loading and error states | |
-| 15 | Test the complete app | |
+| 13 | Connect React to the API | done |
+| 14 | Loading and error states | done |
+| 15 | Test the complete app | next |
 | 16 | Deploy | 📌 where to host |
 | 17 | Final README | |
