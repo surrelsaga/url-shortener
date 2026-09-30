@@ -19,5 +19,5 @@ learning project
 | 13 | Connect React to the API | done |
 | 14 | Loading and error states | done |
 | 15 | Test the complete app | next |
-| 16 | Deploy | 📌 where to host |
+| 16 | Deploy | 👉 next, 📌 where to host |
 | 17 | Final README | |

@@ -57,6 +57,7 @@ cd server && npm run dev
 |---|---|
 | `npm run dev` | start Fastify, reload on file save |
 | `npm run typecheck` | check types, runs nothing (run before committing) |
+| `npm test` | end-to-end API test (needs `npm run dev` running), cleans up its own rows |
 | `npm run db:generate` | `schema.ts` changed → write a new migration file in `drizzle/` |
 | `npm run db:migrate` | apply migration files this database hasn't run yet |
 | `psql url_shortener -c 'SELECT * FROM urls'` | look at the stored links |

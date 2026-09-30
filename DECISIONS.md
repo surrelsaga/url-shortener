@@ -340,3 +340,16 @@ e.g: http://localhost:3000/a8k2x
     - what really crashes the process: errors **outside** a request (e.g. `DATABASE_URL is not set` at startup, a promise nobody `await`s)
 
 - **Cost:** a user hitting #4 gets no detail, so debugging needs the server log. Browser check (#1) is UX only: curl skips it, so the server still validates everything.
+
+## Decision 13: one end-to-end API test with Node's built-in test runner
+
+- **Problem:** so far every check was by hand (curl, Thunder Client). After each change I'd have to redo ~10 requests, and a broken path (like the collision retry in M12) can go unnoticed.
+
+- **Options:**
+    1. one end-to-end test file: real HTTP requests to the running server, with `node:test` (built into Node)
+    2. unit tests per function (`isWebUrl`, `generateCode`...) with a framework (Vitest / Jest)
+    3. keep testing by hand
+
+- **Choice & why:** option 1. It tests what users actually hit (HTTP → Fastify → Drizzle → Postgres), no new dependency, one file covers every API row of D03/D12. Unit tests would need helpers moved out of `index.ts` (importing it starts the server) for little gain in a 3-route app.
+
+- **Cost:** the server must be running (`npm run dev`) before `npm test`. It doesn't cover the forced-collision retry (needs a code change, see NOTES M10) or the React UI (checked by hand in the browser, NOTES M15). Test rows are deleted by code, real links are never touched.

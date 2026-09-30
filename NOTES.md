@@ -417,3 +417,20 @@ Tested:
 - backend down (proxy to a dead port) -> Vite proxy `502` with empty body -> `.json()` throws -> "Can't reach the server"
 
 All errors and what the user sees: D12
+
+## Milestone 15: test the complete app
+
+Automated (API): `server/test/api.test.ts`, run with `npm test` while `npm run dev` is running
+- `node:test` + `node:assert` are built into Node, no test framework installed
+- real `fetch` calls to :3000 → checks status codes, bodies, the redirect `Location`
+- `fetch(url, { redirect: 'manual' })`: don't follow the 302, so I can check it
+- `after(...)`: delete only the rows the test created, then `db.$client.end()` closes the pool so the process exits
+- result: 9/9 pass (health, create + follow, 6× 400, 404)
+
+By hand (UI), in the browser at localhost:5173:
+- [ ] valid URL → link appears → click it → original page opens
+- [ ] `hello` → browser blocks it (no request, check DevTools → Network)
+- [ ] `ftp://x.com` → "longUrl must be an http(s) URL"
+- [ ] stop the backend (Ctrl+C) → "Can't reach the server, please try again"
+- [ ] button shows "Shortening…" and is disabled while sending (DevTools → Network → Slow 3G to see it)
+- [ ] open `localhost:3000/zzzzzzz` → "Short link not found"
