@@ -159,7 +159,7 @@ One service: Fastify serves the API and the built React app (D14).
 |---|---|
 | `DATABASE_URL` | the Neon connection string |
 | `HOST` | `0.0.0.0` |
-| `PUBLIC_URL` | `https://<service-name>.onrender.com` (shown after the service is created) |
+| `PUBLIC_URL` | copy the exact URL Render shows (e.g. `https://dan-shorten-url.onrender.com`). Render picks it from the service name at creation, a taken name gets a random suffix |
 | `NODE_VERSION` | `24` (only if the build log shows an older Node; `.node-version` should cover it) |
 
 5. Deploy → open the URL → shorten a link → click it

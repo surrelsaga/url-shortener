@@ -450,3 +450,10 @@ Build vs start (Render runs both):
 - start (keeps running): `node src/index.ts`
 - `npm ci` instead of `npm install`: installs exactly what `package-lock.json` says, fails if it doesn't match
 - `--include=dev`: Vite, TypeScript, drizzle-kit are devDependencies but the build needs them
+
+Deployed: https://dan-shorten-url.onrender.com
+
+Mistake I made: thought `PUBLIC_URL` chooses the app's address
+- Render picks the address from the **service name at creation** (`url-shortener` was taken → `url-shortener-1f6b`). Renaming the service or changing env vars never changes it
+- `PUBLIC_URL` only tells my code what the address already is, to build short links → it must copy Render's URL exactly, otherwise every short link points to an address with no app
+- fix: new service with an unused name (`dan-shorten-url`), same Neon `DATABASE_URL` (links kept), `db:migrate` did nothing (already applied)

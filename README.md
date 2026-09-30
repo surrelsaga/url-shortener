@@ -19,8 +19,8 @@ learning project
 | 13 | Connect React to the API | done |
 | 14 | Loading and error states | done |
 | 15 | Test the complete app | next |
-| 16 | Deploy | 👉 next, 📌 where to host |
-| 17 | Final README | |
+| 16 | Deploy ([live](https://dan-shorten-url.onrender.com)) | ✅ done |
+| 17 | Final README | 👉 next |
 
 ## Credits
 
