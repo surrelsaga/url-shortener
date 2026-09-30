@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --env-file=.env --watch src/index.ts",
     "typecheck": "tsc",
+    "test": "node --env-file=.env --test test/api.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
