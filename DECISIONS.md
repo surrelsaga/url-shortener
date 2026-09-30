@@ -212,3 +212,70 @@ e.g: http://localhost:3000/a8k2x
 - **Cost:** plain and unstyled, no link back to the app. Differs from the API's JSON errors (fine: this route isn't the API, D03).
 
 - **Revisit if:** the frontend is done and a styled "not found" page is worth it -> option 3.
+
+## Decision 10: switch from raw SQL (`pg`) to Drizzle
+
+- **Problem:** TypeScript doesn't know what my table looks like. So if I misspell a column name, `typecheck` still passes, and the bug only shows up when the app runs.
+
+    | I rename/misspell a column in my code | raw SQL (`pg`) | Drizzle |
+    |---|---|---|
+    | `npm run typecheck` | ✅ passes, TS can't read inside SQL strings or know what `rows` contain | ❌ fails, points at the line |
+    | at runtime | every redirect returns 404, no error, no log | never gets here |
+
+    Why TS is blind: the table's shape lives only in Postgres, and TS never sees it. Mapped out, the current flow looks like this:
+
+    ```
+    raw SQL (M8–M11)
+
+    my TS code ──"SQL in a string"──▶ pg ──▶ Postgres
+         ▲                                      │
+         └──────── rows: any ◀─────────────────┘
+                                                ▲
+    schema.sql ── run by hand with psql, once ──┘   (no record of it anywhere)
+    ```
+
+    Three blind spots:
+    1. **SQL is a string** -> a typo like `orignal_url` only fails at runtime
+    2. **results are `any`** -> `row.orignal_url` is just `undefined`, no error -> every link would look "not found"
+    3. **table changes are manual** -> `schema.sql` only creates from nothing, every other change is a hand-run `ALTER` on each database (D05)
+
+- **Choice & why:** Drizzle. I describe the table in TypeScript (`schema.ts`), so TypeScript knows the columns and catches the typo before the app runs. Everything else is built from that one file:
+
+    ```
+    Drizzle (M12)
+
+    schema.ts (the table, in TS)
+       ├──▶ my TS code ──db.insert(urls)...──▶ Drizzle builds SQL ──▶ pg ──▶ Postgres
+       │         ▲                                                              │
+       │         └──────── rows: { originalUrl: string } ◀──────────────────────┘
+       └──▶ npm run db:generate ──▶ drizzle/0000_*.sql (in Git) ──▶ npm run db:migrate ──▶ Postgres
+                                                                  (each db records what it applied)
+    ```
+
+    Proof (tested with a deliberate typo):
+    - `values({ code, orignalUrl: longUrl })` -> typecheck error: `No overload matches this call`
+    - `row?.original_url` -> typecheck error: `Property 'original_url' does not exist... Did you mean 'originalUrl'?`
+
+    Both were silent runtime bugs with raw SQL.
+
+    When the table changes, `schema.ts` is the one place I edit first:
+    ```
+    edit schema.ts (e.g. add a column)
+       │
+       ├──▶ database:   npm run db:generate → writes the ALTER TABLE for me
+       │                npm run db:migrate  → applies it                   ✅ done by Drizzle
+       │
+       └──▶ my code:    npm run typecheck   → lists every query that's now wrong
+                        I fix those lines                                  ⚠️ done by me, but nothing is missed
+    ```
+    Bonus: `originalUrl: text('original_url')` = TS name vs column name. Renaming the column only changes the string, the code keeps `originalUrl`.
+
+- **Cost:**
+    - 2 more dependencies (`drizzle-orm`, `drizzle-kit`), 2 more files (`schema.ts`, `drizzle.config.ts`)
+    - Drizzle **wraps** Postgres errors: the error code moved from `error.code` to `error.cause.code`. This **silently broke the collision retry** (500 instead of retry) until the forced-collision test from M10 caught it
+    - needed `skipLibCheck` in tsconfig: Drizzle's own type files fail on TS 7
+    - existing database: the first migration had to be `CREATE TABLE IF NOT EXISTS` so it doesn't fail on my table from M9 (and keeps its rows)
+
+- **Revisit if:** honest verdict for this app: blind spots 1 & 2 only matter for 2 queries, so the real win is 3, migrations, starting at deploy (M16): `npm run db:migrate` builds the new database instead of hand-running SQL.
+
+- **AI input:** I asked to feel the pain with raw SQL first (D05). The AI's forced-collision test from M10 is what caught the wrapped-error bug during the switch, a regression that normal requests would never show.

@@ -326,3 +326,33 @@ Tested with curl:
 - unknown code -> `404`, `text/plain`, `Short link not found`
 
 Raw SQL pain point: `result.rows[0]?.original_url` is `any` -> a typo like `.orginal_url` would just be `undefined` at runtime, no TS error -> every link would look "not found"
+
+## Milestone 12: switch to Drizzle
+
+New files:
+- `src/schema.ts`: the urls table in TS (`code`, `originalUrl` -> column `original_url`)
+- `drizzle.config.ts`: tells drizzle-kit where the schema is and where to write migrations
+- `drizzle/0000_create_urls.sql` + `drizzle/meta/`: generated migration, committed to Git
+- deleted `schema.sql` (the migration replaces it)
+
+Commands:
+- `npm run db:generate` -> compares `schema.ts` with the last snapshot, writes a new SQL file in `drizzle/`
+- `npm run db:migrate` -> runs only the files this database hasn't run yet, records them in `drizzle.__drizzle_migrations`
+
+Queries, before -> after:
+```ts
+pool.query('INSERT INTO urls (code, original_url) VALUES ($1, $2)', [code, longUrl])
+db.insert(urls).values({ code, originalUrl: longUrl })
+
+pool.query('SELECT original_url FROM urls WHERE code = $1', [code])      // rows: any
+db.select({ originalUrl: urls.originalUrl }).from(urls).where(eq(urls.code, code))   // typed
+```
+
+Raw SQL pain points, checked:
+- ✅ schema changes -> migrations
+- ✅ results `any` -> typed
+- ✅ column typos -> typecheck errors
+- ❌ input validation -> still mine (Drizzle checks my code, not user data)
+- ❌ error codes -> still a cast, and now nested in `error.cause` (the bug below)
+
+Bug: after the switch, the forced collision returned 500 instead of retrying. Drizzle wraps pg's error, so `error.code` was `undefined` -> fix: `error.cause?.code`. Lesson: rewriting code can break a path that almost never runs, re-run the forced test after refactors.
