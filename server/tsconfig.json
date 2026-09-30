@@ -4,6 +4,7 @@
     "module": "nodenext",
     "types": ["node"], // load node type definitions
     "strict": true, // type checking more strict
+    "skipLibCheck": true, // only check my code, not libraries' own type files (drizzle's fail on TS 7)
     "noEmit": true, // no .js output, Node run .ts directly
     "erasableSyntaxOnly": true, // flags ts features that Node can't strip before Node crashes
     // match Node's import rules: import type for types and .ts extensions on own files

@@ -1,12 +1,14 @@
 import Fastify from 'fastify';
 import { randomBytes } from 'node:crypto';
-import { pool } from './db.ts';
+import { eq, sql } from 'drizzle-orm';
+import { db } from './db.ts';
+import { urls } from './schema.ts';
 
 const app = Fastify({ logger: true });
 
 app.get('/health', async () => {
-    // SQL query string is added withing .query()
-    await pool.query('select 1');
+    // raw SQL still possible when needed, via the sql`` tag
+    await db.execute(sql`select 1`);
     return { status: "ok" };
 })
 
@@ -26,12 +28,14 @@ async function insertWithUniqueCode(longUrl: string) {
     for (let attempt = 1; attempt <= 3; attempt++) {
         const code = generateCode();
         try {
-            // $1, $2 are filled from the array, so user input never becomes SQL
-            await pool.query('INSERT INTO urls (code, original_url) VALUES ($1, $2)', [code, longUrl]);
+            // Drizzle builds: INSERT INTO urls (code, original_url) VALUES ($1, $2) -> still parameters, no SQL injection
+            // column names are checked by TS: a typo like `orignalUrl` fails typecheck
+            await db.insert(urls).values({ code, originalUrl: longUrl });
             return code;
         } catch (error) {
             // 23505 = unique_violation (primary key taken). Anything else is a real failure -> rethrow (500)
-            if ((error as { code?: string }).code !== '23505') throw error;
+            // Drizzle wraps pg's error, the Postgres error code is on `error.cause` (D10)
+            if ((error as { cause?: { code?: string } }).cause?.code !== '23505') throw error;
             app.log.warn({ code, attempt }, 'short code collision, retrying');
         }
     }
@@ -59,8 +63,10 @@ app.post('/api/urls', async (request, reply) => {
 app.get<{ Params: { code: string } }>('/:code', async (request, reply) => {
     const { code } = request.params; // the part after "/", e.g. "a8K2x"
 
-    const result = await pool.query('SELECT original_url FROM urls WHERE code = $1', [code]);
-    const originalUrl = result.rows[0]?.original_url; // no row -> undefined
+    // Drizzle builds: SELECT original_url FROM urls WHERE code = $1
+    // `row` is typed { originalUrl: string } | undefined, not `any` like with raw pg
+    const [row] = await db.select({ originalUrl: urls.originalUrl }).from(urls).where(eq(urls.code, code));
+    const originalUrl = row?.originalUrl; // no row -> undefined
 
     if (!originalUrl) {
         // a person sees this in the browser, so plain text instead of JSON (D09)
