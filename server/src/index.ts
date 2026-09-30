@@ -1,10 +1,23 @@
 import Fastify, { type FastifyError } from 'fastify';
 import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import fastifyStatic from '@fastify/static';
 import { eq, sql } from 'drizzle-orm';
 import { db } from './db.ts';
 import { urls } from './schema.ts';
 
 const app = Fastify({ logger: true });
+
+// Production: this one server also serves the built React app (D14). Dev uses Vite instead, so skip if not built.
+const clientDist = fileURLToPath(new URL('../../client/dist', import.meta.url));
+if (existsSync(clientDist)) {
+    // wildcard: false -> one exact route per built file (/, /assets/...), so they win over /:code
+    app.register(fastifyStatic, { root: clientDist, wildcard: false });
+}
+
+// Base of the links we hand out: http://localhost:3000 locally, the real domain in production
+const PUBLIC_URL = process.env.PUBLIC_URL ?? 'http://localhost:3000';
 
 // Every error not handled inside a route ends up here (D12)
 app.setErrorHandler<FastifyError>((error, request, reply) => {
@@ -66,7 +79,7 @@ app.post('/api/urls', async (request, reply) => {
     const code = await insertWithUniqueCode(longUrl);
 
     reply.code(201);
-    return { shortUrl: `http://localhost:3000/${code}` }; // ponytail: hardcoded host, move to env var at deploy
+    return { shortUrl: `${PUBLIC_URL}/${code}` };
 })
 
 // Follow a short URL: GET /:code -> 302 to the original url | 404 (D03)
@@ -88,4 +101,5 @@ app.get<{ Params: { code: string } }>('/:code', async (request, reply) => {
     return reply.redirect(originalUrl, 302);
 })
 
-await app.listen({ port: 3000 });
+// Render sets PORT, and needs HOST=0.0.0.0 (reachable from outside the machine). Locally: 3000 on localhost
+await app.listen({ port: Number(process.env.PORT ?? 3000), host: process.env.HOST ?? 'localhost' });

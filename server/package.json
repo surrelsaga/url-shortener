@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "node --env-file=.env --watch src/index.ts",
+    "start": "node src/index.ts",
     "typecheck": "tsc",
     "test": "node --env-file=.env --test test/api.test.ts",
     "db:generate": "drizzle-kit generate",
@@ -15,6 +16,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@fastify/static": "^10.1.5",
     "drizzle-orm": "^0.45.3",
     "fastify": "^5.12.5",
     "pg": "^8.23.0"

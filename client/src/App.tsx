@@ -64,6 +64,15 @@ function App() {
           Shortened URL: <a href={shortUrl}>{shortUrl}</a>
         </p>
       )}
+
+      {/* icon license requires attribution. rel="noopener noreferrer": the opened tab can't control this page */}
+      <footer>
+        <small>
+          Icon: <a href="https://iconscout.com/icons/url" target="_blank" rel="noopener noreferrer">url</a> by{' '}
+          <a href="https://iconscout.com/contributors/flowicon" target="_blank" rel="noopener noreferrer">Flowicon</a> on{' '}
+          <a href="https://iconscout.com" target="_blank" rel="noopener noreferrer">IconScout</a>
+        </small>
+      </footer>
     </main>
   )
 }
