@@ -353,3 +353,38 @@ e.g: http://localhost:3000/a8k2x
 - **Choice & why:** option 1. It tests what users actually hit (HTTP → Fastify → Drizzle → Postgres), no new dependency, one file covers every API row of D03/D12. Unit tests would need helpers moved out of `index.ts` (importing it starts the server) for little gain in a 3-route app.
 
 - **Cost:** the server must be running (`npm run dev`) before `npm test`. It doesn't cover the forced-collision retry (needs a code change, see NOTES M10) or the React UI (checked by hand in the browser, NOTES M15). Test rows are deleted by code, real links are never touched.
+
+## Decision 14: deploy as one service on Render, database on Neon
+
+- **Problem:** the app has to run somewhere public. In dev, React (:5173) reaches the API through Vite's proxy (D11), which doesn't exist in production. And `shortUrl` was hardcoded to `http://localhost:3000`.
+
+- **Options (shape):**
+    1. **one service**: Fastify also serves the built React files -> one URL, `/api` stays same-origin
+    2. two services: React on a static host, API elsewhere -> 2 deploys, CORS, short links on the API's domain
+
+- **Options (host):** Render + Neon (free) / Railway (smooth, paid after trial) / Heroku (no free tier, ~$10/month for server + Postgres)
+
+- **Choice & why:** one service on Render, Postgres on Neon.
+    - one URL for everything: the page, the API and the short links share a domain, no CORS (D11's cost solved)
+    - $0: Render free web service + Neon free Postgres (doesn't expire)
+    - no Docker: Render builds from GitHub with plain commands
+
+    ```
+    https://<app>.onrender.com
+      /             → React (client/dist, served by @fastify/static)
+      /assets/...   → React's JS/CSS/favicon
+      /api/urls     → create
+      /a8K2x        → redirect
+                ↓
+          Neon Postgres (DATABASE_URL)
+    ```
+
+- **Code changes for this:**
+    - `@fastify/static` serves `client/dist` only if it exists (dev keeps using Vite). `wildcard: false` = one exact route per file, so `/` and `/assets/...` win over `/:code`
+    - favicon moved from `public/` to `src/` -> built into `/assets/`, otherwise `/favicon.svg` would hit `/:code` (404)
+    - `PUBLIC_URL`, `PORT`, `HOST` from env (defaults = local values)
+    - `drizzle.config.ts` loads `.env` only if it exists (Render has no `.env`)
+
+- **Cost:** Render's free server sleeps after ~15 min idle -> first request after that takes ~30-60s (bad for a redirect product, fine for learning). One server does both jobs, so a heavy page load and API calls share it.
+
+- **Revisit if:** real users -> paid instance (no sleep) or a custom short domain.

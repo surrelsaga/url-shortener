@@ -132,3 +132,38 @@ client/
 ├── index.html        the one HTML page
 └── vite.config.ts    React plugin + /api proxy
 ```
+
+## 3. Deploy (Render + Neon)
+
+One service: Fastify serves the API and the built React app (D14).
+
+### Database (Neon)
+1. Sign up at neon.tech → create a project
+2. Copy the connection string (`postgresql://...neon.tech/neondb?sslmode=require`)
+
+### Server (Render)
+1. Push the repo to GitHub (`git push`)
+2. render.com → **New → Web Service** → connect the GitHub repo
+3. Settings:
+
+| Field | Value |
+|---|---|
+| Root Directory | *(empty = repo root)* |
+| Build Command | `cd client && npm ci --include=dev && npm run build && cd ../server && npm ci --include=dev && npm run db:migrate` |
+| Start Command | `cd server && npm start` |
+| Instance Type | Free |
+
+4. Environment variables:
+
+| Key | Value |
+|---|---|
+| `DATABASE_URL` | the Neon connection string |
+| `HOST` | `0.0.0.0` |
+| `PUBLIC_URL` | `https://<service-name>.onrender.com` (shown after the service is created) |
+| `NODE_VERSION` | `24` (only if the build log shows an older Node; `.node-version` should cover it) |
+
+5. Deploy → open the URL → shorten a link → click it
+
+### After that
+- every `git push` to main → Render rebuilds and redeploys (build runs `db:migrate`, so new migrations are applied automatically)
+- server sleeps after ~15 min idle → first request takes ~30-60s

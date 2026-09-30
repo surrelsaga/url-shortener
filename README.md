@@ -21,3 +21,7 @@ learning project
 | 15 | Test the complete app | next |
 | 16 | Deploy | 👉 next, 📌 where to host |
 | 17 | Final README | |
+
+## Credits
+
+Icon: [url](https://iconscout.com/icons/url) by [Flowicon](https://iconscout.com/contributors/flowicon) on [IconScout](https://iconscout.com)

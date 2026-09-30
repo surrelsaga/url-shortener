@@ -434,3 +434,19 @@ By hand (UI), in the browser at localhost:5173:
 - [ ] stop the backend (Ctrl+C) → "Can't reach the server, please try again"
 - [ ] button shows "Shortening…" and is disabled while sending (DevTools → Network → Slow 3G to see it)
 - [ ] open `localhost:3000/zzzzzzz` → "Short link not found"
+
+## Milestone 16: deploy
+
+What changed for production (details in D14):
+- Fastify serves the built React app (`client/dist`) with `@fastify/static` → one server, one URL
+- `PUBLIC_URL` / `PORT` / `HOST` come from env vars, local defaults stay the same
+- `HOST=0.0.0.0` in production: `localhost` only accepts connections from the same machine, `0.0.0.0` accepts from outside (Render's router)
+- favicon moved into `src/` so it's served from `/assets/`, not `/favicon.svg` (which `/:code` would catch)
+
+Tested locally as "production": `npm run build` in client, then server with `PORT=3997 PUBLIC_URL=http://localhost:3997` → page, JS, favicon, `/health`, create, redirect, 404 all from one server
+
+Build vs start (Render runs both):
+- build (once per deploy): install packages, build React, `db:migrate` the Neon database
+- start (keeps running): `node src/index.ts`
+- `npm ci` instead of `npm install`: installs exactly what `package-lock.json` says, fails if it doesn't match
+- `--include=dev`: Vite, TypeScript, drizzle-kit are devDependencies but the build needs them
